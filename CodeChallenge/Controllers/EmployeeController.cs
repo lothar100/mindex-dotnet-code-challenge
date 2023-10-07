@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using CodeChallenge.Models;
+using CodeChallenge.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using CodeChallenge.Services;
-using CodeChallenge.Models;
+using System;
 
 namespace CodeChallenge.Controllers
 {
@@ -16,12 +13,19 @@ namespace CodeChallenge.Controllers
         private readonly ILogger _logger;
         private readonly IEmployeeService _employeeService;
         private readonly IReportingStructureService _reportingStructureService;
+        private readonly ICompensationService _compensationService;
 
-        public EmployeeController(ILogger<EmployeeController> logger, IEmployeeService employeeService, IReportingStructureService reportingStructureService)
+        public EmployeeController(
+            ILogger<EmployeeController> logger,
+            IEmployeeService employeeService,
+            IReportingStructureService reportingStructureService,
+            ICompensationService compensationService
+        )
         {
             _logger = logger;
             _employeeService = employeeService;
             _reportingStructureService = reportingStructureService;
+            _compensationService = compensationService;
         }
 
         [HttpPost]
@@ -61,7 +65,7 @@ namespace CodeChallenge.Controllers
             return Ok(newEmployee);
         }
 
-        [HttpGet("reportingStructure/{id}", Name = "reportingStructure")]
+        [HttpGet("reportingStructure/{id}")]
         public IActionResult GetReportingStructure(String id)
         {
             _logger.LogDebug($"Received reporting structure get request for '{id}'");
@@ -70,6 +74,35 @@ namespace CodeChallenge.Controllers
                 return NotFound();
 
             return Ok(reportingStructure);
+        }
+
+        [HttpPost("compensation")]
+        public IActionResult CreateCompensation([FromBody] Compensation compensation)
+        {
+            var employeeDescription =
+                compensation.EmployeeId != null
+                ? compensation.EmployeeId
+                : $"{compensation.Employee?.FirstName ?? "null"} {compensation.Employee?.LastName ?? "null"}";
+
+            _logger.LogDebug($"Received compensation create request for '{employeeDescription}'");
+
+            var newCompensation = _compensationService.Create(compensation);
+
+            var locationUri = new Uri($"{Request.Scheme}://{Request.Host}{Request.Path}/{newCompensation.Employee.EmployeeId}");
+
+            return Created(locationUri, newCompensation);
+        }
+
+        [HttpGet("compensation/{id}")]
+        public IActionResult GetCompensation(String id)
+        {
+            _logger.LogDebug($"Received compensation get request for '{id}'");
+
+            var compensation = _compensationService.GetByEmployeeId(id);
+            if (compensation == null)
+                return NotFound();
+
+            return Ok(compensation);
         }
 
     }

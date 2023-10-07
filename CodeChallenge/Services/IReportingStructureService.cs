@@ -4,6 +4,6 @@ namespace CodeChallenge.Services
 {
     public interface IReportingStructureService
     {
-        public ReportingStructure Read(string id);
+        ReportingStructure Read(string id);
     }
 }

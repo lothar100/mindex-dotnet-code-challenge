@@ -1,15 +1,11 @@
-
+using CodeChallenge.Models;
+using CodeCodeChallenge.Tests.Integration.Extensions;
+using CodeCodeChallenge.Tests.Integration.Helpers;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Net;
 using System.Net.Http;
 using System.Text;
-
-using CodeChallenge.Models;
-
-using CodeCodeChallenge.Tests.Integration.Extensions;
-using CodeCodeChallenge.Tests.Integration.Helpers;
-
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CodeCodeChallenge.Tests.Integration
 {
@@ -166,5 +162,88 @@ namespace CodeCodeChallenge.Tests.Integration
             Assert.AreEqual(expectedLastName, report.Employee.LastName);
             Assert.AreEqual(expectedNumberOfReports, report.NumberOfReports);
         }
+
+        [TestMethod]
+        public void CreateCompensation_Returns_Created()
+        {
+            // Arrange
+            var compensation = new Compensation()
+            {
+                Salary = 100000d,
+                EffectiveDate = DateTime.Now,
+                EmployeeId = "16a596ae-edd3-4847-99fe-c4518e82c86f"
+            };
+
+            var requestContent = new JsonSerialization().ToJson(compensation);
+
+            // Execute
+            var postRequestTask = _httpClient.PostAsync("api/employee/compensation",
+               new StringContent(requestContent, Encoding.UTF8, "application/json"));
+            var response = postRequestTask.Result;
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
+
+            var newCompensation = response.DeserializeContent<Compensation>();
+            Assert.IsNotNull(newCompensation);
+            Assert.IsNotNull(newCompensation.Employee);
+            Assert.IsNotNull(newCompensation.Employee.EmployeeId);
+            Assert.AreEqual(compensation.Salary, newCompensation.Salary);
+            Assert.AreEqual(compensation.EffectiveDate, newCompensation.EffectiveDate);
+        }
+
+        [TestMethod]
+        [DataRow(75000d, "62c1084e-6e34-4630-93fd-9153afb65309")]
+        [DataRow(54000d, "c0c2293d-16bd-4603-8e08-638a9d18b22c")]
+        public void GetCompensationByEmployeeId_Returns_Ok(double salary, string employeeId)
+        {
+            // Arrange
+            var inputCompensation = new Compensation()
+            {
+                Salary = salary,
+                EffectiveDate = DateTime.Now,
+                EmployeeId = employeeId
+            };
+            var requestContent = new JsonSerialization().ToJson(inputCompensation);
+            var postRequestTask = _httpClient.PostAsync("api/employee/compensation",
+               new StringContent(requestContent, Encoding.UTF8, "application/json"));
+            var createResponse = postRequestTask.Result;
+            Assert.AreEqual(HttpStatusCode.Created, createResponse.StatusCode);
+            var outputCompensation = createResponse.DeserializeContent<Compensation>();
+
+            // Execute
+            var getRequestTask = _httpClient.GetAsync($"api/employee/compensation/{outputCompensation.Employee.EmployeeId}");
+            var getResponse = getRequestTask.Result;
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, getResponse.StatusCode);
+
+            Assert.IsNotNull(outputCompensation);
+            Assert.IsNotNull(outputCompensation.Employee);
+            Assert.AreEqual(inputCompensation.Salary, outputCompensation.Salary);
+            Assert.AreEqual(inputCompensation.EffectiveDate, outputCompensation.EffectiveDate);
+
+            var getCompensation = getResponse.DeserializeContent<Compensation>();
+            Assert.IsNotNull(getCompensation);
+            Assert.IsNotNull(getCompensation.Employee);
+            Assert.AreEqual(outputCompensation.Employee.EmployeeId, getCompensation.Employee.EmployeeId);
+            Assert.AreEqual(outputCompensation.Salary, getCompensation.Salary);
+            Assert.AreEqual(outputCompensation.EffectiveDate, getCompensation.EffectiveDate);
+        }
+
+        [TestMethod]
+        public void GetCompensationByEmployeeId_Returns_NotFound()
+        {
+            // Arrange
+            var employeeId = "Invalid_Id";
+
+            // Execute
+            var getRequestTask = _httpClient.GetAsync($"api/employee/compensation/{employeeId}");
+            var getResponse = getRequestTask.Result;
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.NotFound, getResponse.StatusCode);
+        }
+
     }
 }
