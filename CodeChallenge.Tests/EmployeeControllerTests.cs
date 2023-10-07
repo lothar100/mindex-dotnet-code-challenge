@@ -1,4 +1,5 @@
 
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -131,6 +132,39 @@ namespace CodeCodeChallenge.Tests.Integration
 
             // Assert
             Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        [TestMethod]
+        [DataRow( 4, "16a596ae-edd3-4847-99fe-c4518e82c86f", "John",    "Lennon" )]
+        [DataRow( 0, "b7839309-3348-463b-a7e3-5de1c168beb3", "Paul",    "McCartney" )]
+        [DataRow( 2, "03aa1462-ffa9-4978-901b-7c001562cf6f", "Ringo",   "Starr" )]
+        [DataRow( 0, "62c1084e-6e34-4630-93fd-9153afb65309", "Pete",    "Best" )]
+        [DataRow( 0, "c0c2293d-16bd-4603-8e08-638a9d18b22c", "George",  "Harrison" )]
+        public void GetReportingStructure_Returns_Ok(
+            int expectedNumberOfReports,
+            string employeeId,
+            string expectedFirstName,
+            string expectedLastName
+        )
+        {
+            // Arrange ... (DataRow)
+
+            // Execute
+            var getRequestTask = _httpClient.GetAsync($"api/employee/reportingStructure/{employeeId}");
+            var response = getRequestTask.Result;
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            var report = response.DeserializeContent<ReportingStructure>();
+
+            Console.WriteLine("(expected, actual) title");
+            Console.WriteLine($"({expectedFirstName}, {report.Employee.FirstName}) first name");
+            Console.WriteLine($"({expectedLastName}, {report.Employee.LastName}) last name");
+            Console.WriteLine($"({expectedNumberOfReports}, {report.NumberOfReports}) number of reports");
+
+            Assert.AreEqual(expectedFirstName, report.Employee.FirstName);
+            Assert.AreEqual(expectedLastName, report.Employee.LastName);
+            Assert.AreEqual(expectedNumberOfReports, report.NumberOfReports);
         }
     }
 }
